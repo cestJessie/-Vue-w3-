@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Week3</title>
+  <link rel="stylesheet" href="./css/product.css">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+</head>
+
+<body>
+  <div id="app">
+    <div class="container">
+      <div class="text-end mt-4">
+        <!-- 打開 modal: 新增商品 -->
+        <button class="btn btn-primary" @click="openModal('new')">
+          建立新的產品
+        </button>
+      </div>
+      <table class="table mt-4">
+        <thead>
+          <tr>
+            <th width="120">
+              分類
+            </th>
+            <th>產品名稱</th>
+            <th width="120">
+              原價
+            </th>
+            <th width="120">
+              售價
+            </th>
+            <th width="100">
+              是否啟用
+            </th>
+            <th width="120">
+              編輯
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 跑迴圈渲染資料 -->
+          <tr v-for="item in products" :key="item.id">
+            <td>{{ item.category }}</td>
+            <td>{{ item.title }}</td>
+            <td class="text-start">{{ item.origin_price }}</td>
+            <td class="text-start">{{ item.price }}</td>
+            <td>
+              <!-- v-if 判斷啟用狀態 -->
+              <span class="text-success" v-if="item.is_enable">啟用</span>
+              <span v-else>未啟用</span>
+            </td>
+            <td>
+              <div class="btn-group">
+                <!-- 打開 modal: 編輯商品 -->
+                <button type="button" class="btn btn-outline-primary btn-sm" @click="openModal('edit', item)">
+                  編輯
+                </button>
+                <!-- 打開 modal: 刪除商品 -->
+                <button type="button" class="btn btn-outline-danger btn-sm" @click="openModal('delete', item)">
+                  刪除
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Modal -->
+    <!-- 新增產品 -->
+    <div id="productModal" ref="productModal" class="modal fade" tabindex="-1" aria-labelledby="productModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0">
+          <div class="modal-header bg-dark text-white">
+            <h5 id="productModalLabel" class="modal-title">
+              <!-- v-if 判斷 新增 or 編輯 的Modal -->
+              <span v-if="isNew">新增產品</span>
+              <span v-else>編輯產品</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-sm-4">
+                <div class="mb-3">
+                  <label for="imageUrl" class="form-label">主要圖片</label>
+                  <!-- v-model 雙向綁定圖片url -->
+                  <input id="imageUrl" v-model="tempProduct.imageUrl" type="text" class="form-control mb-2"
+                    placeholder="請輸入圖片連結">
+                  <!-- v-bind 綁定圖片 src -->
+                  <img class="img-fluid" :src="tempProduct.imageUrl">
+                </div>
+
+                <h3 class="mb-3">多圖新增</h3>
+                <!-- Array.isArray()：是JavaScript中的函數，檢查給定的值是否是一個陣列。如果是陣列，該函數返回true，否則返回false。 -->
+                <div v-if="Array.isArray(tempProduct.imagesUrl)">
+                  <!-- v-for 跑迴圈，列出所有圖片 -->
+                  <div class="mb-1" v-for="(image, key) in tempProduct.imagesUrl" :key="key">
+                    <div class="mb-3">
+                      <!-- v-bind 綁定屬性，key為index。透過 for, id 來綁定 label和 input -->
+                      <label :for="`imagesUrl${key}`" class="form-label">圖片網址</label>
+                      <input :id="`imagesUrl${key}`" v-model="tempProduct.imagesUrl[key]" type="text"
+                        class="form-control" placeholder="請輸入圖片連結">
+                    </div>
+                    <!-- v-bind 綁定 src 的 url -->
+                    <img class="img-fluid" :src="image">
+                  </div>
+                  <div v-if="!tempProduct.imagesUrl.length || tempProduct.imagesUrl[tempProduct.imagesUrl.length - 1]">
+                    <button class="btn btn-outline-primary btn-sm d-block w-100"
+                      @click="tempProduct.imagesUrl.push('')">
+                      新增圖片
+                    </button>
+                  </div>
+                  <div v-else>
+                    <!-- 點擊刪除按鈕，會刪除圖片陣列最後一筆資料 -->
+                    <button class="btn btn-outline-danger btn-sm d-block w-100" @click="tempProduct.imagesUrl.pop()">
+                      刪除圖片
+                    </button>
+                  </div>
+                </div>
+                <!-- 當 Array.isArray(tempProduct.imagesUrl) 為 false，也就是沒有圖片資料時，會跳出新增按鈕 -->
+                <div v-else>
+                  <!-- 將陣列預設一筆空字串 -->
+                  <button class="btn btn-outline-primary btn-sm d-block w-100" @click="createImages">
+                    新增圖片
+                  </button>
+                </div>
+              </div>
+                <div class="col-sm-8">
+                  <div class="mb-3">
+                    <label for="title" class="form-label">標題</label>
+                    <!-- v-model 雙向綁定：標題 -->
+                    <input id="title" type="text" class="form-control" placeholder="請輸入標題" v-model="tempProduct.title">
+                  </div>
+
+                  <div class="row">
+                    <div class="mb-3 col-md-6">
+                      <label for="category" class="form-label">分類</label>
+                      <!-- v-model 雙向綁定：分類 -->
+                      <input id="category" type="text" class="form-control" placeholder="請輸入分類"
+                        v-model="tempProduct.category">
+                    </div>
+                    <div class="mb-3 col-md-6">
+                      <label for="price" class="form-label">單位</label>
+                      <!-- v-model 雙向綁定：單位 -->
+                      <input id="unit" type="text" class="form-control" placeholder="請輸入單位" v-model="tempProduct.unit">
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="mb-3 col-md-6">
+                      <label for="origin_price" class="form-label">原價</label>
+                      <!-- v-model 雙向綁定：原價 -->
+                      <!-- .number是一個修飾符，用來指示Vue.js將綁定的數值視為數字型態 -->
+                      <input id="origin_price" type="number" min="0" class="form-control" placeholder="請輸入原價"
+                        v-model="tempProduct.origin_price">
+                    </div>
+                    <div class="mb-3 col-md-6">
+                      <label for="price" class="form-label">售價</label>
+                      <input id="price" type="number" min="0" class="form-control" placeholder="請輸入售價"
+                        v-model="tempProduct.price">
+                    </div>
+                  </div>
+                  <hr>
+
+                  <div class="mb-3">
+                    <label for="description" class="form-label">產品描述</label>
+                    <!-- v-model 雙向綁定：產品描述 -->
+                    <textarea id="description" type="text" class="form-control" placeholder="請輸入產品描述"
+                      v-model="tempProduct.description">
+                  </textarea>
+                  </div>
+                  <div class="mb-3">
+                    <label for="content" class="form-label">說明內容</label>
+                    <!-- v-model 雙向綁定：說明內容 -->
+                    <textarea id="description" type="text" class="form-control" placeholder="請輸入說明內容"
+                      v-model="tempProduct.content">
+                  </textarea>
+                  </div>
+                  <div class="mb-3">
+                    <div class="form-check">
+                      <!-- v-model 雙向綁定：是否啟用 -->
+                      <input id="is_enabled" class="form-check-input" type="checkbox" :true-value="1" :false-value="0"
+                        v-model="tempProduct.is_enabled">
+                      <label class="form-check-label" for="is_enabled">是否啟用</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                取消
+              </button>
+              <!-- 新增/編輯產品功能函式 -->
+              <button type="button" class="btn btn-primary" @click="updateProduct">
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 刪除產品 -->
+      <div id="delProductModal" ref="delProductModal" class="modal fade" tabindex="-1"
+        aria-labelledby="delProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content border-0">
+            <div class="modal-header bg-danger text-white">
+              <h5 id="delProductModalLabel" class="modal-title">
+                <span>刪除產品</span>
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              是否刪除
+              <!-- 產品名稱 -->
+              <strong class="text-danger">{{ tempProduct.title }}</strong> 商品(刪除後將無法恢復)。
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                取消
+              </button>
+              <!-- 刪除產品功能函式 -->
+              <button type="button" class="btn btn-danger" @click="delProduct">
+                確認刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Modal -->
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="./js/product.js" type="module"></script>
+</body>
+
+</html>
